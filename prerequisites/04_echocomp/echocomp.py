@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import loadmat
-
+from scipy.signal import lfilter
+import os
+import sys
 
 def nlms4echokomp(x, g, noise, alpha, lh):
     """ The Python function 'nlms4echokomp' simulates a system for acoustic echo compensation using NLMS algorithm
@@ -38,39 +40,51 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         # Extract the last lg values(including the current value) from the
         # input speech signal x, where x(i) represents the current value.
         # todo your code
-        # x_block =
+        x_block = x[index-lg:index]
 
         # Filtering the input speech signal using room impulse response and adaptive filter. Please note that you don't
         # need to implement the complete filtering here. A simple vector manipulation would be enough here
         # todo your code:
         # x_tilde[k] =
         # x_hat[k] =
+        x_tilde[k] = np.dot(h, x_block)  # Convolution
+        x_hat[k] = x_tilde[k] - noise[index-lg]  # Removing the noise component
 
         # Calculating the estimated error signal
         # todo your code
         # err[k] =
+        err[k] = x[index] - x_hat[k]
 
         # Updating the filter
         # todo your code
         # h =
+        h += alpha * err[k] * x_block / (np.linalg.norm(x_block)**2)
         # Calculating the absolute system distance
         # todo your code
         # s_diff[k] =
+        s_diff[k] = np.abs(x[index] - x_tilde[k])
 
         k = k + 1  # time index
 
     # Calculating the relative system distance in dB
     # todo your code
     # s_diff = 10 * np.log10(s_diff[:k] /  HERE! ).T
+    s_diff = 10 * np.log10(s_diff / np.mean(x ** 2))
 
     return s_diff, err, x_hat, x_tilde
 
 
 # switch between exercises
 exercise = 1  # choose between 1-7
+try:
+    #print(sys.argv[1])
+    exercise = int(sys.argv[1])
+except:
+    pass
 
 # load data
-f = np.load('04_echocomp/echocomp.npz')
+#print(os.path.abspath("."))
+f = np.load('./echocomp.npz')
 g = [f['g1'], f['g2'], f['g3']] # three different room impulse responses
 s = f['s'] # speech
 fs = f['fs']
@@ -101,12 +115,22 @@ if exercise == 2:
 
     x[0] = s  # Speech signal
     # todo your code
-    # x[1] =        #white noise
+    x[1] = np.random.normal(scale=np.sqrt(0.16), size=np.size(s))  #white noise
+    b = [1]  # numerator coefficient vector in a 1-D sequence
+    a = [1, -0.5]  # denominator coefficient vector in a 1-D sequence 
+    x[2] = lfilter(b, a, x[1])  #colorful noise
+    #use a single impulse response for all 3 cases
+    g[1]=g[0]
+    g[2]=g[0]
 
-    # x[2] =        #colorful noise
+
+    #s_diff_speech, _, _, _ = nlms4echokomp(x[0], g[0], np.zeros(ls), alpha, 200)
+    #s_diff_rw, _, _, _ = nlms4echokomp(x[1], g[0], np.zeros(ls), alpha, 200)
+    #s_diff_rc, _, _, _ = nlms4echokomp(x[2], g[0], np.zeros(ls), alpha, 200)
 
     leg = ('Speech', 'white noise', 'colorful noise')
     title = 'Different Input Signals'
+
 elif exercise == 3:
     # todo your code
     # noise[0] =
@@ -137,8 +161,29 @@ elif exercise == 7:
 if exercise == 1:
     s_diff, e, x_h, x_t = nlms4echokomp(n0, g[0], np.zeros(ls), alpha, 200)
 
+    #calculate ERLE in dB
+    ERLE_dB = 10 * np.log10(np.square(x_t) / np.square(e))
+
     fig, axs = plt.subplots(3)
     # todo your code for ex. 1
+     #plot echo signal and residual echo
+    axs[0].plot(x_t, label='Echo Signal', alpha=0.7)
+    axs[0].plot(e, label='Residual Echo', alpha=0.7)
+    axs[0].set_xlabel('Time')
+    axs[0].set_ylabel('Amplitude')
+    axs[0].legend()
+    
+    #plot relative system distance
+    axs[1].plot(s_diff, label='Relative System Distance (D(k))')
+    axs[1].set_xlabel('Time')
+    axs[1].set_ylabel('Magnitude')
+    axs[1].legend()
+    
+    #plot ERLE measure in dB
+    axs[2].plot(ERLE_dB, label='ERLE (dB)')
+    axs[2].set_xlabel('Time')
+    axs[2].set_ylabel('Magnitude (dB)')
+    axs[2].legend()
     plt.show()
 else:
     for i in range(vn):
