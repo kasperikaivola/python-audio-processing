@@ -192,7 +192,7 @@ else:
         # to different exercises.
 
         s_diff, e, x_h, x_t = nlms4echokomp(x[i], g[i], noise[i], alphas[i], lh[i])
-        plt.plot(s_diff, label=leg[i])
+        plt.plot(s_diff, label=leg[i], alpha=0.7)
 
     plt.title('Exercise ' + str(exercise) + ': ' + title)
     plt.xlabel('k')
