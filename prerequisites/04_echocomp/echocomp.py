@@ -1,14 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import loadmat
-from scipy.signal import lfilter
+from scipy.signal import lfilter, convolve
 import os
 import sys
 
 def nlms4echokomp(x, g, noise, alpha, lh):
     """ The Python function 'nlms4echokomp' simulates a system for acoustic echo compensation using NLMS algorithm
     :param x:       Input speech signal from far speaker
-    :param g:       impluse response of the simulated room
+    :param g:       impulse response of the simulated room
     :param noise:   Speech signal from the near speaker and the background noise(s + n)
     :param alpha:   Step size for the NLMS algorithm
     :param lh:      Length of the compensation filter
@@ -47,13 +47,20 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         # todo your code:
         # x_tilde[k] =
         # x_hat[k] =
-        x_tilde[k] = np.dot(h, x_block)  # Convolution
-        x_hat[k] = x_tilde[k] - noise[index-lg]  # Removing the noise component
+        #x_tilde[k] = np.dot(h, x_block)  # Convolution
+        #x_hat[k] = x_tilde[k] - noise[k]  # Removing the noise component
+        #print(x)
+        #print(g)
+        #x2 = x.astype(np.float32) / np.max(np.abs(x))
+        #g2 = g.astype(np.float32) / np.max(np.abs(g))
+        x_tilde[k] = np.dot(x_block,g)
+        x_tilde[k]+=noise[k]
+        x_hat[k] = np.dot(x_block,h)
 
         # Calculating the estimated error signal
         # todo your code
         # err[k] =
-        err[k] = x[index] - x_hat[k]
+        err[k] = x_tilde[k] - x_hat[k]
 
         # Updating the filter
         # todo your code
@@ -62,14 +69,15 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         # Calculating the absolute system distance
         # todo your code
         # s_diff[k] =
-        s_diff[k] = np.abs(x[index] - x_tilde[k])
+        #s_diff[k] = (np.abs(g[k] - h[k])**2)/(np.abs(g[k])**2)
+        s_diff = (np.abs(g)**2)-(np.abs(h)**2)
 
         k = k + 1  # time index
 
     # Calculating the relative system distance in dB
     # todo your code
     # s_diff = 10 * np.log10(s_diff[:k] /  HERE! ).T
-    s_diff = 10 * np.log10(s_diff / np.mean(x ** 2))
+    s_diff = 10 * np.log10(s_diff[:k] / np.mean(x ** 2))
 
     return s_diff, err, x_hat, x_tilde
 
@@ -123,21 +131,18 @@ if exercise == 2:
     g[1]=g[0]
     g[2]=g[0]
 
-
-    #s_diff_speech, _, _, _ = nlms4echokomp(x[0], g[0], np.zeros(ls), alpha, 200)
-    #s_diff_rw, _, _, _ = nlms4echokomp(x[1], g[0], np.zeros(ls), alpha, 200)
-    #s_diff_rc, _, _, _ = nlms4echokomp(x[2], g[0], np.zeros(ls), alpha, 200)
-
     leg = ('Speech', 'white noise', 'colorful noise')
     title = 'Different Input Signals'
 
 elif exercise == 3:
     # todo your code
-    # noise[0] =
-    # noise[1] =
-    # noise[2] =
-    # leg =
-    # title =
+    noise[0] = np.random.normal(scale=np.sqrt(0), size=np.size(s))
+    noise[1] = np.random.normal(scale=np.sqrt(0.001), size=np.size(s))
+    noise[2] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    g[1]=g[0]
+    g[2]=g[0]
+    leg = ('σ^2=0','σ^2=0.001','σ^2=0.01')
+    title = 'Different background noise levels'
     pass
 elif exercise == 4:
     # consider, which input variables of nlms4echokomp() you have to change
@@ -176,7 +181,7 @@ if exercise == 1:
     #plot relative system distance
     axs[1].plot(s_diff, label='Relative System Distance (D(k))')
     axs[1].set_xlabel('Time')
-    axs[1].set_ylabel('Magnitude')
+    axs[1].set_ylabel('Magnitude (dB)')
     axs[1].legend()
     
     #plot ERLE measure in dB
