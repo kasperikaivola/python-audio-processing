@@ -70,7 +70,11 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         # todo your code
         # s_diff[k] =
         #s_diff[k] = (np.abs(g[k] - h[k])**2)/(np.abs(g[k])**2)
-        s_diff = (np.abs(g)**2)-(np.abs(h)**2)
+        #print(g[k])
+        #print(h[k])
+        diff = g-h
+        #s_diff = (np.abs(g)**2)-(np.abs(h)**2)
+        s_diff[k] = (np.linalg.norm(diff)**2)/(np.linalg.norm(g)**2)
 
         k = k + 1  # time index
 
