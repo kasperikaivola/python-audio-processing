@@ -136,26 +136,52 @@ if exercise == 2:
     g[2]=g[0]
 
     leg = ('Speech', 'white noise', 'colorful noise')
-    title = 'Different Input Signals'
+    title = 'Different Input Signals, no noise'
 
 elif exercise == 3:
     # todo your code
     noise[0] = np.random.normal(scale=np.sqrt(0), size=np.size(s))
     noise[1] = np.random.normal(scale=np.sqrt(0.001), size=np.size(s))
     noise[2] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    #empty input signal in all cases
     g[1]=g[0]
     g[2]=g[0]
     leg = ('σ^2=0','σ^2=0.001','σ^2=0.01')
-    title = 'Different background noise levels'
+    title = 'Different background noise levels, input=white noise'
     pass
 elif exercise == 4:
     # consider, which input variables of nlms4echokomp() you have to change
     # do it similar as in the previous elif section
     # todo your code
-    pass
+    noise[0] = np.random.normal(scale=np.sqrt(0), size=np.size(s))
+    noise[1] = np.random.normal(scale=np.sqrt(0.001), size=np.size(s))
+    noise[2] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    # speech as input signal in all cases
+    x[0]=s
+    x[1]=s
+    x[2]=s
+    #same impulse response for all
+    g[1]=g[0]
+    g[2]=g[0]
+    leg = ('σ^2=0','σ^2=0.001','σ^2=0.01')
+    title = 'Different background noise levels, input=speech'
 
 elif exercise == 5:
     # todo your code
+    #white noise, variance=0.01
+    noise[0] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    noise[1] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    noise[2] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    #excitation signal: white noise, var=0.16
+    #stepsize alpha: {0.1,0.5,1.0}
+    alphas[0]=0.1
+    alphas[1]=0.5
+    alphas[2]=1.0
+    #same impulse response for all
+    g[1]=g[0]
+    g[2]=g[0]
+    leg = ('alpha=0.1','alpha=0.5','alpha=1.0')
+    title = 'Different stepsizes (alpha), input=white noise, var=0.16'
     pass
 
 elif exercise == 6:
