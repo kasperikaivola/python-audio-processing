@@ -26,12 +26,6 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         import warnings
         warnings.warn('The compensation filter is shortened to fit the length of RIR!', UserWarning)
 
-    if lh < lg:
-
-        for i in range(lh, lg):
-            g[i] = 0
-        print(lh)
-        lh = lg
 
     # Vectors are initialized to zero vectors.
     x_tilde = np.zeros(lx - lg)
@@ -47,11 +41,11 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         # Extract the last lg values(including the current value) from the
         # input speech signal x, where x(i) represents the current value.
         # todo your code
-        x_block = x[index-lg:index]
+        x_block = x[index-lh:index]
         # Filtering the input speech signal using room impulse response and adaptive filter. Please note that you don't
         # need to implement the complete filtering here. A simple vector manipulation would be enough here
         # todo your code:
-        x_tilde[k] = np.dot(x_block,g)
+        x_tilde[k] = np.dot(x_block,g[:lh])
 
         #Noise is added here
         x_tilde[k]+=noise[k]
@@ -59,18 +53,19 @@ def nlms4echokomp(x, g, noise, alpha, lh):
 
         # Calculating the estimated error signal
         # todo your code
-        #err[k] = x_tilde[k]-x_hat[k]
         err[k] = x_tilde[k]- x_hat[k]
         # Updating the filter
         # todo your code
         power = np.linalg.norm(x_block)**2
         h += alpha*err[k]*x_block/power
 
+
         # Calculating the absolute system distance
         # todo your code
-        diff = np.linalg.norm(g-h)**2
-        s_diff[k] = (diff)/(np.linalg.norm(g)**2)
-
+        #diff = np.linalg.norm(g-h)**2
+        #s_diff[k] = (diff)/(np.linalg.norm(g)**2)
+        diff = np.linalg.norm(g[:lh] - h) ** 2
+        s_diff[k] = diff / np.linalg.norm(g[:lh]) ** 2
         k = k + 1  # time index
 
     # Calculating the relative system distance in dB
@@ -180,17 +175,29 @@ elif exercise == 5:
 
 elif exercise == 6:
     # todo your code
-    lh[0] = len(g[0]) - 10
 
-    lh[1] = len(g[0]) - 30
-
-    lh[2] = len(g[0]) - 60
+    #lh[0] = len(g[0]) - 10
+    #lh[1] = len(g[0]) - 30
+    #lh[2] = len(g[0]) - 60
 
     # same impulse response for all
+    #g[1] = g[0]
+    #g[2] = g[0]
+
+    # Defining different lengths for the compensation filter for each variant
+    lh_lengths = [len(g[0]) - diff for diff in [10, 30, 60]]
+
+    # Update the lh values for each setup
+    lh[0], lh[1], lh[2] = lh_lengths
+
+    # Keep using the same impulse response g[0] for all variants
     g[1] = g[0]
     g[2] = g[0]
-    leg = ('lh=190', 'lh=170', 'lh=140')
+
+    # Labels for plot legends to reflect different filter lengths
+    leg = ['lh=' + str(lh_lengths[0]), 'lh=' + str(lh_lengths[1]), 'lh=' + str(lh_lengths[2])]
     title = 'Different length of transversal filter (lh)'
+
 
     pass
 
