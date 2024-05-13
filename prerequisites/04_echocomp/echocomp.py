@@ -77,7 +77,7 @@ def nlms4echokomp(x, g, noise, alpha, lh):
 
 
 # switch between exercises
-exercise = 6  # choose between 1-7
+exercise = 7  # choose between 1-7
 
 # load data
 f = np.load('echocomp.npz') #04_echocomp/
@@ -203,6 +203,20 @@ elif exercise == 6:
 
 elif exercise == 7:
     # todo your code
+
+    # Adjust the length of compensation filters to match each corresponding impulse response
+    lh = [len(g[i]) for i in range(vn)]  # Ensure lh matches the exact lengths of g[0], g[1], g[2]
+
+    # No background noise is present
+    noise = [np.zeros(ls) for _ in range(vn)]
+
+    # Step size is the same for all cases since it is not specified to vary
+    alphas = [alpha] * vn
+
+    # Legends and title are adjusted for clarity
+    leg = ['g1 Length = ' + str(len(g[0])), 'g2 Length = ' + str(len(g[1])), 'g3 Length = ' + str(len(g[2]))]
+    title = 'Room impulse responses of different lengths'
+
     pass
 
 # There should be appropriate legends and axis labels in each figure!
