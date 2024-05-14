@@ -34,13 +34,14 @@ def nlms4echokomp(x, g, noise, alpha, lh):
     s_diff = x_tilde.copy()
     h = np.zeros(lh)
 
+
     # Realization of NLMS algorithm
     k = 0
     for index in range(lg, lx):
         # Extract the last lg values(including the current value) from the
         # input speech signal x, where x(i) represents the current value.
         # todo your code
-        x_block = x[index-lg:index]
+        x_block = x[index-lh:index]
 
         # Filtering the input speech signal using room impulse response and adaptive filter. Please note that you don't
         # need to implement the complete filtering here. A simple vector manipulation would be enough here
@@ -53,9 +54,10 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         #print(g)
         #x2 = x.astype(np.float32) / np.max(np.abs(x))
         #g2 = g.astype(np.float32) / np.max(np.abs(g))
-        x_tilde[k] = np.dot(x_block,g)
+        x_tilde[k] = np.dot(x_block,g[:lh])
         x_tilde[k]+=noise[k]
         x_hat[k] = np.dot(x_block,h)
+        #x_hat[k] = np.inner(h[k].T,x[k])
 
         # Calculating the estimated error signal
         # todo your code
@@ -72,7 +74,7 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         #s_diff[k] = (np.abs(g[k] - h[k])**2)/(np.abs(g[k])**2)
         #print(g[k])
         #print(h[k])
-        diff = g-h
+        diff = g[:lh]-h
         #s_diff = (np.abs(g)**2)-(np.abs(h)**2)
         s_diff[k] = (np.linalg.norm(diff)**2)/(np.linalg.norm(g)**2)
 
@@ -81,7 +83,7 @@ def nlms4echokomp(x, g, noise, alpha, lh):
     # Calculating the relative system distance in dB
     # todo your code
     # s_diff = 10 * np.log10(s_diff[:k] /  HERE! ).T
-    s_diff = 10 * np.log10(s_diff[:k] / np.mean(x ** 2))
+    s_diff = 10 * np.log10(s_diff[:k] / np.mean(x ** 2)).T
 
     return s_diff, err, x_hat, x_tilde
 
@@ -182,15 +184,47 @@ elif exercise == 5:
     g[2]=g[0]
     leg = ('alpha=0.1','alpha=0.5','alpha=1.0')
     title = 'Different stepsizes (alpha), input=white noise, var=0.16'
-    pass
 
 elif exercise == 6:
     # todo your code
-    pass
+    #lh[0] = len(g[0]) - 10
+    #lh[1] = len(g[0]) - 30
+    #lh[2] = len(g[0]) - 60
+
+    # same impulse response for all
+    g[1] = g[0]
+    g[2] = g[0]
+
+    # Defining different lengths for the compensation filter for each variant
+    lh_lengths = [len(g[0]) - diff for diff in [10, 30, 60]]
+
+    # Update the lh values for each setup
+    lh[0], lh[1], lh[2] = lh_lengths
+
+    # Keep using the same impulse response g[0] for all variants
+    g[1] = g[0]
+    g[2] = g[0]
+
+    # Labels for plot legends to reflect different filter lengths
+    leg = ['lh=' + str(lh_lengths[0]), 'lh=' + str(lh_lengths[1]), 'lh=' + str(lh_lengths[2])]
+    title = 'Different length of transversal filter (lh)'
 
 elif exercise == 7:
     # todo your code
-    pass
+    # Adjust the length of compensation filters to match each corresponding impulse response
+    lh = [len(g[i]) for i in range(vn)]  # Ensure lh matches the exact lengths of g[0], g[1], g[2]
+
+    # No background noise is present
+    noise = [np.zeros(ls) for _ in range(vn)]
+
+    # Step size is the same for all cases since it is not specified to vary
+    #alphas = [alpha] * vn
+
+    #white noise as input
+
+    # Legends and title are adjusted for clarity
+    leg = ['g1 Length = ' + str(len(g[0])), 'g2 Length = ' + str(len(g[1])), 'g3 Length = ' + str(len(g[2]))]
+    title = 'Room impulse responses of different lengths'
 
 # There should be appropriate legends and axis labels in each figure!
 if exercise == 1:
