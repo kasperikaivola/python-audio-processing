@@ -7,7 +7,7 @@ from scipy.signal import lfilter
 def nlms4echokomp(x, g, noise, alpha, lh):
     """ The Python function 'nlms4echokomp' simulates a system for acoustic echo compensation using NLMS algorithm
     :param x:       Input speech signal from far speaker
-    :param g:       impluse response of the simulated room
+    :param g:       impulse response of the simulated room
     :param noise:   Speech signal from the near speaker and the background noise(s + n)
     :param alpha:   Step size for the NLMS algorithm
     :param lh:      Length of the compensation filter
@@ -26,58 +26,58 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         import warnings
         warnings.warn('The compensation filter is shortened to fit the length of RIR!', UserWarning)
 
+    # Ensure h is zero-padded if lh < lg
+    if lh < lg:
+        h = np.zeros(lg)  # Zero pad h to the length of g
+    else:
+        h = np.zeros(lh)
 
-    # Vectors are initialized to zero vectors.
+    # Initialize vectors to zero
     x_tilde = np.zeros(lx - lg)
     x_hat = x_tilde.copy()
     err = x_tilde.copy()
     s_diff = x_tilde.copy()
-    h = np.zeros(lh)
 
     # Realization of NLMS algorithm
     k = 0
-
     for index in range(lg, lx):
         # Extract the last lg values(including the current value) from the
         # input speech signal x, where x(i) represents the current value.
-        # todo your code
-        x_block = x[index-lh:index]
-        # Filtering the input speech signal using room impulse response and adaptive filter. Please note that you don't
-        # need to implement the complete filtering here. A simple vector manipulation would be enough here
-        # todo your code:
-        x_tilde[k] = np.dot(x_block,g[:lh])
+        x_block = x[index - lg:index]
 
-        #Noise is added here
-        x_tilde[k]+=noise[k]
-        x_hat[k] = np.dot(x_block,h)
+        # Filtering the input speech signal using room impulse response and adaptive filter
+        x_tilde[k] = np.dot(g, x_block)  # Using full g
+
+        # Noise is added here
+        x_tilde[k] += noise[k]
+
+        # Only use the relevant part of h if lh < lg
+        x_hat[k] = np.dot(h[:lg] if lh < lg else h, x_block)
 
         # Calculating the estimated error signal
-        # todo your code
-        err[k] = x_tilde[k]- x_hat[k]
-        # Updating the filter
-        # todo your code
-        power = np.linalg.norm(x_block)**2
-        h += alpha*err[k]*x_block/power
+        err[k] = x_tilde[k] - x_hat[k]
 
+        # Updating the filter
+        # Updating the filter
+        power = np.linalg.norm(x_block) ** 2
+        if power != 0:
+            update = alpha * err[k] * x_block / power
+            h[:lh] += update[:lh]  # Ensure the update is only applied within the bounds of h
 
         # Calculating the absolute system distance
-        # todo your code
-        #diff = np.linalg.norm(g-h)**2
-        #s_diff[k] = (diff)/(np.linalg.norm(g)**2)
-        diff = np.linalg.norm(g[:lh] - h) ** 2
+        diff = np.linalg.norm(g[:lh] - h[:lh]) ** 2  # Consider only the first lh coefficients
         s_diff[k] = diff / np.linalg.norm(g[:lh]) ** 2
-        k = k + 1  # time index
+
+        k += 1
 
     # Calculating the relative system distance in dB
-    # todo your code
-    #s_diff = 10 * np.log10(s_diff[:k] / np.mean(x**2)).T
     s_diff = 10 * np.log10(s_diff[:k])
 
     return s_diff, err, x_hat, x_tilde
 
 
 # switch between exercises
-exercise = 7  # choose between 1-7
+exercise = 6  # choose between 1-7
 
 # load data
 f = np.load('echocomp.npz') #04_echocomp/
