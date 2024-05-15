@@ -27,6 +27,8 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         import warnings
         warnings.warn('The compensation filter is shortened to fit the length of RIR!', UserWarning)
 
+    #zero-padding the 
+
     # Vectors are initialized to zero vectors.
     x_tilde = np.zeros(lx - lg)
     x_hat = x_tilde.copy()
@@ -34,29 +36,26 @@ def nlms4echokomp(x, g, noise, alpha, lh):
     s_diff = x_tilde.copy()
     h = np.zeros(lh)
 
-
     # Realization of NLMS algorithm
     k = 0
     for index in range(lg, lx):
         # Extract the last lg values(including the current value) from the
         # input speech signal x, where x(i) represents the current value.
         # todo your code
-        x_block = x[index-lh:index]
+        x_block = x[index-lg:index]
 
         # Filtering the input speech signal using room impulse response and adaptive filter. Please note that you don't
         # need to implement the complete filtering here. A simple vector manipulation would be enough here
         # todo your code:
         # x_tilde[k] =
         # x_hat[k] =
-        #x_tilde[k] = np.dot(h, x_block)  # Convolution
-        #x_hat[k] = x_tilde[k] - noise[k]  # Removing the noise component
-        #print(x)
-        #print(g)
-        #x2 = x.astype(np.float32) / np.max(np.abs(x))
-        #g2 = g.astype(np.float32) / np.max(np.abs(g))
-        x_tilde[k] = np.dot(x_block,g[:lh])
+
+        # filter the input signal x with the room response g
+        x_tilde[k] = np.dot(x_block,g[:lg])
+        # add noise to the filtered signal
         x_tilde[k]+=noise[k]
-        x_hat[k] = np.dot(x_block,h)
+        # filter the noisy and echoing signal with the compensation filter
+        x_hat[k] = np.dot(x_block,np.concatenate((h,np.zeros(len(x_block)-len(h)))))
         #x_hat[k] = np.inner(h[k].T,x[k])
 
         # Calculating the estimated error signal
@@ -67,14 +66,14 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         # Updating the filter
         # todo your code
         # h =
-        h += alpha * err[k] * x_block / (np.linalg.norm(x_block)**2)
+        h += (alpha * err[k] * x_block / (np.linalg.norm(x_block)**2))[:lh]
         # Calculating the absolute system distance
         # todo your code
         # s_diff[k] =
         #s_diff[k] = (np.abs(g[k] - h[k])**2)/(np.abs(g[k])**2)
         #print(g[k])
         #print(h[k])
-        diff = g[:lh]-h
+        diff = g[:lg]-np.concatenate((h,np.zeros(len(x_block)-len(h))))
         #s_diff = (np.abs(g)**2)-(np.abs(h)**2)
         s_diff[k] = (np.linalg.norm(diff)**2)/(np.linalg.norm(g)**2)
 
@@ -83,7 +82,7 @@ def nlms4echokomp(x, g, noise, alpha, lh):
     # Calculating the relative system distance in dB
     # todo your code
     # s_diff = 10 * np.log10(s_diff[:k] /  HERE! ).T
-    s_diff = 10 * np.log10(s_diff[:k] / np.mean(x ** 2)).T
+    s_diff = 10 * np.log10(s_diff[:k]).T
 
     return s_diff, err, x_hat, x_tilde
 
@@ -191,6 +190,10 @@ elif exercise == 6:
     #lh[1] = len(g[0]) - 30
     #lh[2] = len(g[0]) - 60
 
+    noise[0] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    noise[1] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    noise[2] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+
     # same impulse response for all
     g[1] = g[0]
     g[2] = g[0]
@@ -206,8 +209,8 @@ elif exercise == 6:
     g[2] = g[0]
 
     # Labels for plot legends to reflect different filter lengths
-    leg = ['lh=' + str(lh_lengths[0]), 'lh=' + str(lh_lengths[1]), 'lh=' + str(lh_lengths[2])]
-    title = 'Different length of transversal filter (lh)'
+    leg = ['m=m´-10', 'm=m´-30', 'm=m´-60']
+    title = 'Different length of transversal filter (m), white background noise var=0.01'
 
 elif exercise == 7:
     # todo your code
@@ -215,7 +218,7 @@ elif exercise == 7:
     lh = [len(g[i]) for i in range(vn)]  # Ensure lh matches the exact lengths of g[0], g[1], g[2]
 
     # No background noise is present
-    noise = [np.zeros(ls) for _ in range(vn)]
+    #noise = [np.zeros(ls) for _ in range(vn)]
 
     # Step size is the same for all cases since it is not specified to vary
     #alphas = [alpha] * vn
@@ -224,7 +227,7 @@ elif exercise == 7:
 
     # Legends and title are adjusted for clarity
     leg = ['g1 Length = ' + str(len(g[0])), 'g2 Length = ' + str(len(g[1])), 'g3 Length = ' + str(len(g[2]))]
-    title = 'Room impulse responses of different lengths'
+    title = 'Room impulse responses of different lengths, no background noise'
 
 # There should be appropriate legends and axis labels in each figure!
 if exercise == 1:
