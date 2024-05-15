@@ -235,10 +235,12 @@ if exercise == 1:
 
     #calculate ERLE in dB
     ERLE_dB = 10 * np.log10(np.square(x_t) / np.square(e))
+    #take moving average of ERLE over the previous 200 samples
+    ERLE_dB_avg = np.convolve(ERLE_dB, np.ones(200)/200, mode='valid')
 
     fig, axs = plt.subplots(3)
     # todo your code for ex. 1
-     #plot echo signal and residual echo
+    #plot echo signal and residual echo
     axs[0].plot(x_t, label='Echo Signal', alpha=0.7)
     axs[0].plot(e, label='Residual Echo', alpha=0.7)
     axs[0].set_xlabel('Time')
@@ -252,7 +254,7 @@ if exercise == 1:
     axs[1].legend()
     
     #plot ERLE measure in dB
-    axs[2].plot(ERLE_dB, label='ERLE (dB)')
+    axs[2].plot(ERLE_dB_avg, label='ERLE (dB)')
     axs[2].set_xlabel('Time')
     axs[2].set_ylabel('Magnitude (dB)')
     axs[2].legend()
