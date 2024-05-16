@@ -229,6 +229,8 @@ elif exercise == 7:
 if exercise == 1:
     s_diff, e, x_h, x_t = nlms4echokomp(n0, g[0], np.zeros(ls), alpha, 200)
     ERLE_dB = 10 * np.log10((np.square(x_t)) / np.square(e))
+    #take moving average of ERLE over the previous 200 samples
+    ERLE_dB_avg = np.convolve(ERLE_dB, np.ones(200)/200, mode='valid')
 
     fig, axs = plt.subplots(3)
     # todo your code for ex. 1
@@ -246,7 +248,7 @@ if exercise == 1:
     axs[1].set_ylabel('dB')
 
     #ERLE measure
-    axs[2].plot(ERLE_dB)
+    axs[2].plot(ERLE_dB_avg)
     axs[2].set_title('ERLE Measure $e(k)$')
     axs[2].set_xlabel('Time')
     axs[2].set_ylabel('dB')
