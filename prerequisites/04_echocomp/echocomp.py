@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import loadmat
 from scipy.signal import lfilter
-
+import os
+import sys
 
 def nlms4echokomp(x, g, noise, alpha, lh):
     """ The Python function 'nlms4echokomp' simulates a system for acoustic echo compensation using NLMS algorithm
@@ -78,6 +79,11 @@ def nlms4echokomp(x, g, noise, alpha, lh):
 
 # switch between exercises
 exercise = 6  # choose between 1-7
+try:
+    #print(sys.argv[1])
+    exercise = int(sys.argv[1])
+except:
+    pass
 
 # load data
 f = np.load('echocomp.npz') #04_echocomp/
