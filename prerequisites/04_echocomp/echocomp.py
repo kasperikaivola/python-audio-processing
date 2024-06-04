@@ -66,7 +66,7 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         # Updating the filter
         # todo your code
         # h =
-        h += (alpha * err[k] * x_block / (np.linalg.norm(x_block)**2))[:lh]
+        h += (alpha * err[k] * x_block[:lh] / (np.linalg.norm(x_block[:lh])**2))
         # Calculating the absolute system distance
         # todo your code
         # s_diff[k] =
@@ -190,9 +190,9 @@ elif exercise == 6:
     #lh[1] = len(g[0]) - 30
     #lh[2] = len(g[0]) - 60
 
-    noise[0] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
-    noise[1] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
-    noise[2] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    #noise[0] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    #noise[1] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    #noise[2] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
 
     # same impulse response for all
     g[1] = g[0]
