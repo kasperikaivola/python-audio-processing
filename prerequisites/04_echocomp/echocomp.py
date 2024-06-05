@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import loadmat
-from scipy.signal import lfilter
+from scipy.signal import lfilter, convolve
 import os
 import sys
 
@@ -27,58 +27,68 @@ def nlms4echokomp(x, g, noise, alpha, lh):
         import warnings
         warnings.warn('The compensation filter is shortened to fit the length of RIR!', UserWarning)
 
-    # Ensure h is zero-padded if lh < lg
-    if lh < lg:
-        h = np.zeros(lg)  # Zero pad h to the length of g
-    else:
-        h = np.zeros(lh)
+    #zero-padding the 
 
-    # Initialize vectors to zero
+    # Vectors are initialized to zero vectors.
     x_tilde = np.zeros(lx - lg)
     x_hat = x_tilde.copy()
     err = x_tilde.copy()
     s_diff = x_tilde.copy()
+    h = np.zeros(lh)
 
     # Realization of NLMS algorithm
     k = 0
     for index in range(lg, lx):
         # Extract the last lg values(including the current value) from the
         # input speech signal x, where x(i) represents the current value.
-        x_block = x[index - lg:index]
+        # todo your code
+        x_block = x[index-lg:index]
 
-        # Filtering the input speech signal using room impulse response and adaptive filter
-        x_tilde[k] = np.dot(g, x_block)  # Using full g
+        # Filtering the input speech signal using room impulse response and adaptive filter. Please note that you don't
+        # need to implement the complete filtering here. A simple vector manipulation would be enough here
+        # todo your code:
+        # x_tilde[k] =
+        # x_hat[k] =
 
-        # Noise is added here
-        x_tilde[k] += noise[k]
-
-        # Only use the relevant part of h if lh < lg
-        x_hat[k] = np.dot(h[:lg] if lh < lg else h, x_block)
+        # filter the input signal x with the room response g
+        x_tilde[k] = np.dot(x_block,g[:lg])
+        # add noise to the filtered signal
+        x_tilde[k]+=noise[k]
+        # filter the noisy and echoing signal with the compensation filter
+        x_hat[k] = np.dot(x_block,np.concatenate((h,np.zeros(len(x_block)-len(h)))))
+        #x_hat[k] = np.inner(h[k].T,x[k])
 
         # Calculating the estimated error signal
+        # todo your code
+        # err[k] =
         err[k] = x_tilde[k] - x_hat[k]
 
         # Updating the filter
-        # Updating the filter
-        power = np.linalg.norm(x_block) ** 2
-        if power != 0:
-            update = alpha * err[k] * x_block / power
-            h[:lh] += update[:lh]  # Ensure the update is only applied within the bounds of h
-
+        # todo your code
+        # h =
+        h += (alpha * err[k] * x_block[:lh] / (np.linalg.norm(x_block[:lh])**2))
         # Calculating the absolute system distance
-        diff = np.linalg.norm(g[:lh] - h[:lh]) ** 2  # Consider only the first lh coefficients
-        s_diff[k] = diff / np.linalg.norm(g[:lh]) ** 2
+        # todo your code
+        # s_diff[k] =
+        #s_diff[k] = (np.abs(g[k] - h[k])**2)/(np.abs(g[k])**2)
+        #print(g[k])
+        #print(h[k])
+        diff = g[:lg]-np.concatenate((h,np.zeros(len(x_block)-len(h))))
+        #s_diff = (np.abs(g)**2)-(np.abs(h)**2)
+        s_diff[k] = (np.linalg.norm(diff)**2)/(np.linalg.norm(g)**2)
 
-        k += 1
+        k = k + 1  # time index
 
     # Calculating the relative system distance in dB
-    s_diff = 10 * np.log10(s_diff[:k])
+    # todo your code
+    # s_diff = 10 * np.log10(s_diff[:k] /  HERE! ).T
+    s_diff = 10 * np.log10(s_diff[:k]).T
 
     return s_diff, err, x_hat, x_tilde
 
 
 # switch between exercises
-exercise = 6  # choose between 1-7
+exercise = 1  # choose between 1-7
 try:
     #print(sys.argv[1])
     exercise = int(sys.argv[1])
@@ -86,7 +96,8 @@ except:
     pass
 
 # load data
-f = np.load('echocomp.npz') #04_echocomp/
+#print(os.path.abspath("."))
+f = np.load('./echocomp.npz')
 g = [f['g1'], f['g2'], f['g3']] # three different room impulse responses
 s = f['s'] # speech
 fs = f['fs']
@@ -107,7 +118,7 @@ lh = len(g[0]) * np.ones(vn, dtype=int)  # length of the compensation filter
 x = [n0.copy() for i in range(vn)]  # white noise as input signal
 
 # In the following part, the matrices and vectors must be adjusted to
-# meet the requirements for the different exercises. Note that for exercise 2-6
+# meet the requirements for the different exercises. Note that for exercise 2-6 
 # you must use g[0]. Do this without changing the for loop at the end.
 # (exercise 1 can be simulated using only the initialized values above)
 
@@ -115,34 +126,29 @@ if exercise == 2:
     # Only the value of input speech signal need to be changed. All the other
     # vectors and parameters should not be modified
 
-    x[0] = s  # Speech signal s
+    x[0] = s  # Speech signal
     # todo your code
-    r_w = np.random.normal(scale=np.sqrt(0.16),size=np.size(s))
-    x[1] = r_w        #white noise r_w
-
-    b = [1]           #numerator b
-    a = [1,-0.5]      #dominator a
-    r_c = lfilter(b,a,x[1])
-    x[2] = r_c        #colorful noise r_c
-
+    x[1] = np.random.normal(scale=np.sqrt(0.16), size=np.size(s))  #white noise
+    b = [1]  # numerator coefficient vector in a 1-D sequence
+    a = [1, -0.5]  # denominator coefficient vector in a 1-D sequence 
+    x[2] = lfilter(b, a, x[1])  #colorful noise
     #use a single impulse response for all 3 cases
     g[1]=g[0]
     g[2]=g[0]
 
     leg = ('Speech', 'white noise', 'colorful noise')
-    title = 'Different Input Signals'
+    title = 'Different Input Signals, no noise'
+
 elif exercise == 3:
     # todo your code
-    noise[0] = np.random.normal(scale=np.sqrt(0.0),size=np.size(s))
-    noise[1] = np.random.normal(scale=np.sqrt(0.001),size = np.size(s))
-    noise[2] = np.random.normal(scale=np.sqrt(0.01),size = np.size(s))
-    #use a single impulse response for all 3 cases
+    noise[0] = np.random.normal(scale=np.sqrt(0), size=np.size(s))
+    noise[1] = np.random.normal(scale=np.sqrt(0.001), size=np.size(s))
+    noise[2] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    #empty input signal in all cases
     g[1]=g[0]
     g[2]=g[0]
-
-
-    leg = ['No Noise ($\sigma^2=0$)', 'Low Noise ($\sigma^2=0.001$)', 'High Noise ($\sigma^2=0.01$)']
-    title ='Different background noise'
+    leg = ('σ^2=0','σ^2=0.001','σ^2=0.01')
+    title = 'Different background noise levels, input=white noise'
     pass
 elif exercise == 4:
     # consider, which input variables of nlms4echokomp() you have to change
@@ -160,13 +166,13 @@ elif exercise == 4:
     g[2]=g[0]
     leg = ('σ^2=0','σ^2=0.001','σ^2=0.01')
     title = 'Different background noise levels, input=speech'
-    pass
 
 elif exercise == 5:
     # todo your code
     #white noise, variance=0.01
-    noise[0:3] = [np.random.normal(scale=np.sqrt(0.01), size=np.size(s)) for _ in range(3)]
-
+    noise[0] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    noise[1] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    noise[2] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
     #excitation signal: white noise, var=0.16
     #stepsize alpha: {0.1,0.5,1.0}
     alphas[0]=0.1
@@ -177,18 +183,20 @@ elif exercise == 5:
     g[2]=g[0]
     leg = ('alpha=0.1','alpha=0.5','alpha=1.0')
     title = 'Different stepsizes (alpha), input=white noise, var=0.16'
-    pass
 
 elif exercise == 6:
     # todo your code
-
     #lh[0] = len(g[0]) - 10
     #lh[1] = len(g[0]) - 30
     #lh[2] = len(g[0]) - 60
 
+    #noise[0] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    #noise[1] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+    #noise[2] = np.random.normal(scale=np.sqrt(0.01), size=np.size(s))
+
     # same impulse response for all
-    #g[1] = g[0]
-    #g[2] = g[0]
+    g[1] = g[0]
+    g[2] = g[0]
 
     # Defining different lengths for the compensation filter for each variant
     lh_lengths = [len(g[0]) - diff for diff in [10, 30, 60]]
@@ -201,59 +209,55 @@ elif exercise == 6:
     g[2] = g[0]
 
     # Labels for plot legends to reflect different filter lengths
-    leg = ['lh=' + str(lh_lengths[0]), 'lh=' + str(lh_lengths[1]), 'lh=' + str(lh_lengths[2])]
-    title = 'Different length of transversal filter (lh)'
-
-
-    pass
+    leg = ['m=m´-10', 'm=m´-30', 'm=m´-60']
+    title = 'Different length of transversal filter (m), white background noise var=0.01'
 
 elif exercise == 7:
     # todo your code
-
     # Adjust the length of compensation filters to match each corresponding impulse response
     lh = [len(g[i]) for i in range(vn)]  # Ensure lh matches the exact lengths of g[0], g[1], g[2]
 
     # No background noise is present
-    noise = [np.zeros(ls) for _ in range(vn)]
+    #noise = [np.zeros(ls) for _ in range(vn)]
 
     # Step size is the same for all cases since it is not specified to vary
-    alphas = [alpha] * vn
+    #alphas = [alpha] * vn
+
+    #white noise as input
 
     # Legends and title are adjusted for clarity
     leg = ['g1 Length = ' + str(len(g[0])), 'g2 Length = ' + str(len(g[1])), 'g3 Length = ' + str(len(g[2]))]
-    title = 'Room impulse responses of different lengths'
-
-    pass
+    title = 'Room impulse responses of different lengths, no background noise'
 
 # There should be appropriate legends and axis labels in each figure!
 if exercise == 1:
     s_diff, e, x_h, x_t = nlms4echokomp(n0, g[0], np.zeros(ls), alpha, 200)
-    ERLE_dB = 10 * np.log10((np.square(x_t)) / np.square(e))
+
+    #calculate ERLE in dB
+    ERLE_dB = 10 * np.log10(np.square(x_t) / np.square(e))
     #take moving average of ERLE over the previous 200 samples
     ERLE_dB_avg = np.convolve(ERLE_dB, np.ones(200)/200, mode='valid')
 
     fig, axs = plt.subplots(3)
     # todo your code for ex. 1
-    #echo and residual
-    axs[0].plot(x_t, label='Echo Signal $\\tilde{x}(k)$')
-    axs[0].plot(e, label='Residual Signal $e(k)$')
-    axs[0].set_title('Echo Signal and Residual Signal ')
-    axs[0].legend(fontsize='small',handlelength=2, handletextpad=0.5,loc='upper right',borderpad=0.2,labelspacing=0.1,borderaxespad=0.1)
+    #plot echo signal and residual echo
+    axs[0].plot(x_t, label='Echo Signal', alpha=0.7)
+    axs[0].plot(e, label='Residual Echo', alpha=0.7)
     axs[0].set_xlabel('Time')
     axs[0].set_ylabel('Amplitude')
-    #relative system distance in dB
-    axs[1].plot(s_diff)
-    axs[1].set_title('Relative System Distance $D(k)$ in dB')
+    axs[0].legend()
+    
+    #plot relative system distance
+    axs[1].plot(s_diff, label='Relative System Distance (D(k))')
     axs[1].set_xlabel('Time')
-    axs[1].set_ylabel('dB')
-
-    #ERLE measure
-    axs[2].plot(ERLE_dB_avg)
-    axs[2].set_title('ERLE Measure $e(k)$')
+    axs[1].set_ylabel('Magnitude (dB)')
+    axs[1].legend()
+    
+    #plot ERLE measure in dB
+    axs[2].plot(ERLE_dB_avg, label='ERLE (dB)')
     axs[2].set_xlabel('Time')
-    axs[2].set_ylabel('dB')
-
-    plt.tight_layout()
+    axs[2].set_ylabel('Magnitude (dB)')
+    axs[2].legend()
     plt.show()
 else:
     for i in range(vn):
@@ -262,7 +266,7 @@ else:
         # to different exercises.
 
         s_diff, e, x_h, x_t = nlms4echokomp(x[i], g[i], noise[i], alphas[i], lh[i])
-        plt.plot(s_diff, label=leg[i])
+        plt.plot(s_diff, label=leg[i], alpha=0.7)
 
     plt.title('Exercise ' + str(exercise) + ': ' + title)
     plt.xlabel('k')
@@ -270,7 +274,3 @@ else:
     plt.grid(True)
     plt.legend()
     plt.show()
-
-
-
-
