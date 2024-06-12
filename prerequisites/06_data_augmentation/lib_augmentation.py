@@ -8,6 +8,9 @@ from tqdm import tqdm
 from scipy import signal
 from sklearn.mixture import GaussianMixture
 
+from os import listdir
+from os.path import isfile, join, abspath
+
 
 def vad_extraction(clean_speech):
     
@@ -45,16 +48,24 @@ def feature_extraction(noisy, win_length=320, hop_length=160, n_fft=512):
 
 class GenSpeech:
     def __init__(self, path):
-        pass # YOUR CODE INSTEAD
+        # YOUR CODE INSTEAD
+        self.path = abspath(path)
+        self.files = listdir(path)
 
     def __next__(self):
-        pass # YOUR CODE INSTEAD
+        # YOUR CODE INSTEAD
+        if len(self.files) == 0:
+            raise StopIteration
+        file = self.files.pop()
+        return join(self.path, file)
 
     def __iter__(self):
-        pass # YOUR CODE INSTEAD
+        # YOUR CODE INSTEAD
+        return self
 
     def __len__(self):
-        pass # YOUR CODE INSTEAD
+        # YOUR CODE INSTEAD
+        return len(self.files)
 
 def create_gen_rir(path):
     pass # YOUR CODE INSTEAD
