@@ -13,8 +13,23 @@ from os.path import isfile, join, abspath
 
 
 def vad_extraction(clean_speech):
-    
-    # YOUR CODE HERE
+    # Compute RMS energy for each frame
+    rms = librosa.feature.rms(y=clean_speech, frame_length=320, hop_length=160)[0]
+
+    # Compute log power
+    log_power = 10 * np.log10(rms**2)
+
+    # Fit a GMM with two components to the speech power
+    gmm = GaussianMixture(n_components=2, random_state=0).fit(log_power.reshape(-1, 1))
+
+    # Identify which cluster corresponds to speech (typically the cluster with higher mean log power)
+    speech_cluster = np.argmax(gmm.means_)
+
+    # Compute the posterior probabilities for each frame
+    posterior_probs = gmm.predict_proba(log_power.reshape(-1, 1))[:, speech_cluster]
+
+    # Apply a threshold to obtain the VAD decision (e.g., 0.5)
+    vad = posterior_probs > 0.5
 
     return vad
 
