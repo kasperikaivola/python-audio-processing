@@ -11,6 +11,7 @@ from sklearn.mixture import GaussianMixture
 from os import listdir
 from os.path import isfile, join, abspath
 import scipy.signal
+import random
 
 def vad_extraction(clean_speech):
     # Compute RMS energy for each frame
@@ -37,8 +38,8 @@ def mix(clean_speech_dry, noise_dry, snr, rir):
     #snr specified in db scale
     # YOUR CODE HERE
     #filter the clean speech and noise signals with their respective RIRs
-    clean_speech_filtered = scipy.signal.fftconvolve(clean_speech_dry, rir, mode='full')[:len(clean_speech)]
-    noise_filtered = scipy.signal.fftconvolve(noise_dry, rir, mode='full')[:len(noise)]
+    clean_speech_filtered = scipy.signal.fftconvolve(clean_speech_dry, rir[0], mode='full')[:len(clean_speech_dry)]
+    noise_filtered = scipy.signal.fftconvolve(noise_dry, rir[1], mode='full')[:len(noise_dry)]
     
     #scale the noise to achieve the specified SNR
     clean_speech_power = np.mean(clean_speech_filtered**2)
@@ -57,26 +58,32 @@ def mix(clean_speech_dry, noise_dry, snr, rir):
         noisy_speech = noisy_speech * normalization_factor
         clean_speech_filtered = clean_speech_filtered * normalization_factor
 
-    return noisy_speech, clean_speech_filtered
+    return clean_speech_filtered, noisy_speech
 
 def feature_extraction(noisy, win_length=320, hop_length=160, n_fft=512):
     # YOUR CODE BELOW
-    stft = ...
+    stft = librosa.stft(noisy, n_fft=n_fft, hop_length=hop_length, win_length=win_length, window='hamming')
 
     S = np.abs(stft)
 
-    mel = ...
+    mel = librosa.feature.melspectrogram(S=S**2) #melspectrogram takes S**2 as input
 
-    mfccs = ...
-    delta1 = ...
-    delta2 = ...
+    #first 40 MFCCs
+    mfccs = librosa.feature.mfcc(S=librosa.power_to_db(mel), n_mfcc=40)
+    #first 12 frequency bins of the MFCC's first order delta features
+    delta1 = librosa.feature.delta(mfccs, order=1)[:12, :]
+    #first 6 frequency bins of the MFCC's second order delta features
+    delta2 = librosa.feature.delta(mfccs, order=2)[:6, :]
 
-    bandwidth = ...
-    centroid = ...
-    rolloff = ...
+    #spectral bandwidth
+    bandwidth = librosa.feature.spectral_bandwidth(S=S)
+    #spectral centroid
+    centroid = librosa.feature.spectral_centroid(S=S)
+    #spectral roll-off
+    rolloff = librosa.feature.spectral_rolloff(S=S)
 
-    zero_crossing_rate = ...
-
+    zero_crossing_rate = librosa.feature.zero_crossing_rate(noisy, frame_length=win_length, hop_length=hop_length)
+    #each row is a feature, convert to single precision
     features = np.vstack((mfccs, delta1, delta2, bandwidth, centroid, rolloff, zero_crossing_rate)).astype(np.float32)
 
     return features
@@ -92,7 +99,8 @@ class GenSpeech:
         if len(self.files) == 0:
             raise StopIteration
         file = self.files.pop()
-        return join(self.path, file)
+        speech, _ = librosa.load(join(self.path, file), sr=16E3)
+        return speech
 
     def __iter__(self):
         # YOUR CODE INSTEAD
@@ -103,8 +111,14 @@ class GenSpeech:
         return len(self.files)
 
 def create_gen_rir(path):
-    pass # YOUR CODE INSTEAD
-
+    # YOUR CODE INSTEAD
+    rir_files = [f for f in os.listdir(path) if f.endswith('.wav')]
+    
+    while True:
+        rir_file = random.choice(rir_files)
+        filepath = os.path.join(path, rir_file)
+        rir, _ = librosa.load(filepath, sr=16E3)
+        yield rir
 
 def get_noise(path, len_desired):
     """ Returns a random noise signal. If the noise file is longer than len_desired a random excerpt
