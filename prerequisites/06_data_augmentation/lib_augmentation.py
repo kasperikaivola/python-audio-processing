@@ -10,7 +10,7 @@ from sklearn.mixture import GaussianMixture
 
 from os import listdir
 from os.path import isfile, join, abspath
-
+import scipy.signal
 
 def vad_extraction(clean_speech):
     # Compute RMS energy for each frame
@@ -34,10 +34,30 @@ def vad_extraction(clean_speech):
     return vad
 
 def mix(clean_speech_dry, noise_dry, snr, rir):
-    
+    #snr specified in db scale
     # YOUR CODE HERE
+    #filter the clean speech and noise signals with their respective RIRs
+    clean_speech_filtered = scipy.signal.fftconvolve(clean_speech_dry, rir, mode='full')[:len(clean_speech)]
+    noise_filtered = scipy.signal.fftconvolve(noise_dry, rir, mode='full')[:len(noise)]
+    
+    #scale the noise to achieve the specified SNR
+    clean_speech_power = np.mean(clean_speech_filtered**2)
+    noise_power = np.mean(noise_filtered**2)
+    snr_linear = 10**(snr / 10)
+    scaling_factor = np.sqrt(clean_speech_power / (snr_linear * noise_power))
+    scaled_noise = scaling_factor * noise_filtered
 
-    return ...
+    #sum the clean speech and scaled noise
+    noisy_speech = clean_speech_filtered + scaled_noise
+
+    #normalize the resulting signal if its absolute value exceeds one
+    max_abs_noisy_speech = np.max(np.abs(noisy_speech))
+    if max_abs_noisy_speech > 1:
+        normalization_factor = 1 / max_abs_noisy_speech
+        noisy_speech = noisy_speech * normalization_factor
+        clean_speech_filtered = clean_speech_filtered * normalization_factor
+
+    return noisy_speech, clean_speech_filtered
 
 def feature_extraction(noisy, win_length=320, hop_length=160, n_fft=512):
     # YOUR CODE BELOW
