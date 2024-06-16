@@ -160,9 +160,9 @@ def run_augmentation(path, debug=False):
     """ Contains the main loop for data "Augmentation" """
 
     # Input Paths
-    path_clean_speech = os.path.join(path, 'clean-speech')
+    path_clean_speech = os.path.join(path, 'clean')
     path_noise = os.path.join(path, 'noise')
-    path_rirs  = os.path.join(path, 'rirs')
+    path_rirs  = os.path.join(path, 'rir')
 
     # Output Path
     path_output = os.path.join(path, 'output')
@@ -184,7 +184,14 @@ def run_augmentation(path, debug=False):
             break
 
         # YOUR CODE HERE
-
+        noise = get_noise(path_noise,len(clean))
+        rir1 = next(gen_rirs)
+        rir2 = next(gen_rirs)
+        snr = gen_rand.uniform(0,12)
+        #print(snr)
+        clean_normalized, noisy_speech = mix(clean, noise, snr, [rir1, rir2])
+        features = feature_extraction(noisy_speech)
+        vad = vad_extraction(clean_normalized)
         # save output
         np.savez(
             os.path.join(path_output, str(idx) + '.npz'), 
