@@ -28,7 +28,8 @@ n = 8  # Number of sensors
 
 # switch between exercises
 setting = 1  # choose between 1-2
-d = 4.25/100
+#d = (1 / (1 + abs(np.cos(theta_0)))) * (c / (fs / 2))
+#d = 0.0425
 try:
     #print(sys.argv[1])
     setting = int(sys.argv[1])
@@ -37,8 +38,10 @@ except:
     pass
 
 if setting == 1:
-    theta_0 = np.pi  # endfire array (180 degrees)
-    #d = 4.25 / 100  # Distance between adjacent sensors
+    theta_0 = 0  # endfire array (0 degrees)
+    # d/λ < 1 / (1 + |cos(θ0)|), where θ0 = 0 radians for endfire
+    #dmax = 0.02125
+    #d = (1 / (1 + abs(np.cos(theta_0)))) * (c / (fs / 2))  # Distance between adjacent sensors
     title = ' Endfire Array'
 elif setting == 2:
     theta_0 = np.pi / 2  # broadside array (90 degrees)
@@ -82,13 +85,13 @@ for a in range(bw):  # angle index
     for f in range(bf2):  # frequency index
         # Calculating array-steering vector with dimension 1xN
         # todo: E = ?
-        E = np.exp(-1j * 2 * np.pi * freqs[f] * dist / c * np.cos(angles[a]))
+        E = np.exp(1j * 2 * np.pi * freqs[f] * tau)
 
         # Calculating directivity pattern (Matrix dimension is Bf2xBw)
         # todo: Psi[f, a] =
-        Psi[f, a] = np.abs(np.dot(B[:, f], E.T))
+        Psi[f, a] = np.abs(np.dot(B[:, f], E)) ** 2
         # todo: Psi_db[f, a] =
-        Psi_db[f, a] = 20 * np.log10(Psi[f, a])
+        Psi_db[f, a] = 10 * np.log10(Psi[f, a])
 
         if Psi_db[f, a] < th:
             Psi_db[f, a] = th

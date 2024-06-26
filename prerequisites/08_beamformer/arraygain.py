@@ -22,7 +22,7 @@ except:
     pass
 
 if setting == 1:
-    theta_0 = np.pi  # endfire array (180 degrees)
+    theta_0 = 0  # endfire array (180 degrees)
     #d = ...  # Distance between adjacent sensors
     title = ' Endfire Array'
 elif setting == 2:
@@ -58,12 +58,12 @@ E = np.zeros((n,bf2))
 
 for f in range(bf2): # frequency index
     # Calculating array-steering vector with dimension 1xN
-    #E = np.exp(-1j * 2 * np.pi * freqs[f] * dist / c * np.cos(theta_0)) # todo
-    E[:, f] = np.exp(-1j * 2 * np.pi * freqs[f] * dist / c * np.cos(theta_0))  # Array steering vector
+    E[:, f] = np.exp(-1j * 2 * np.pi * freqs[f] * tau)  # Array steering vector
+
 
     # Calculating directivity pattern for target direction only (Matrix dimension is Bf2x1)
-    #Psi[f] = np.abs(np.dot(B[:, f], E.T))
-    Psi[f] = np.abs(np.dot(B[:, f], E[:, f].T))
+    #Psi[f] = np.abs(np.dot(B[:, f], E[:, f].T))
+    Psi[f] = np.abs(np.dot(B[:, f], E[:, f].conjugate()))**2  # Directivity pattern calculation
 
 Bconj = np.conj(B).T
 
@@ -73,16 +73,20 @@ arg = (2 * freqs * d / c).T
 
 for i in range(n):
     #Psi_wn = ... #todo
-    Psi_wn += np.abs(B[i, :bf2]) ** 2  # White noise gain calculation
+    Psi_wn += np.abs(B[i, :]) ** 2  # White noise gain calculation
     for m in range(n):
         #Psi_diff = ... #todo
-        Psi_diff += np.abs(np.exp(1j * arg * (i - m)))  # Difference gain calculation
+        #Psi_diff += np.abs(np.exp(1j * arg * (i - m)))  # Difference gain calculation
+        phase_diff = np.exp(-1j * arg * (i - m))  # Assuming linear spacing along one dimension
+        Psi_diff += np.abs(np.dot(B[i, :], (B[m, :] * phase_diff).conjugate()))  # Coherently sum the arrays
 
-G = 10 * np.log10( np.abs(Psi) ** 2 / Psi_wn )  # Calculating Array Gain
-Gwn = 10* np.log10( Psi_diff / Psi_wn )  # Calculating White Noise Gain
+
+G = 10 * np.log10( np.abs(Psi_diff) ** 2 / Psi_wn )  # Calculating Array Gain
+Gwn = 10* np.log10( Psi_wn / n )  # Calculating White Noise Gain
 
 # optional but interesting
-f_aliasing = c/d*1/(1+np.cos(theta_0))
+#f_aliasing = c/d*1/(1+np.cos(theta_0))
+f_aliasing  = (1 / (1 + abs(np.cos(theta_0)))) *(c/d)
 
 # Plots
 # =============================================================
