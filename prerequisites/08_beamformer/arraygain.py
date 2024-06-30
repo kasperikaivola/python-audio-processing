@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import sys
+np.seterr(invalid='raise')
 
 # General Parameters:
 script_dir = os.path.dirname(__file__)
@@ -22,7 +23,7 @@ except:
     pass
 
 if setting == 1:
-    theta_0 = 0  # endfire array (180 degrees)
+    theta_0 = 0 # endfire array (0 degrees)
     #d = ...  # Distance between adjacent sensors
     title = ' Endfire Array'
 elif setting == 2:
@@ -53,48 +54,70 @@ for i in range(n):
 B = 1 / n * np.fft.fft(f_n, axis=0).T
 
 # Calculating Psi(Omega,theta_0)
-Psi = np.zeros(bf2)
-E = np.zeros((n,bf2))
+Psi = np.zeros(bf2,dtype=complex)
+Psi_db = np.zeros(bf2,dtype=complex)
+E = np.zeros((n,bf2),dtype=complex)
 
-for f in range(bf2): # frequency index
+#for f in range(bf2): # frequency index
     # Calculating array-steering vector with dimension 1xN
-    E[:, f] = np.exp(-1j * 2 * np.pi * freqs[f] * tau)  # Array steering vector
-
+    #E = np.exp(-1j * 2 * np.pi * freqs[f] * dist / c * np.cos(theta_0)) # todo
+#    E[:, f] = np.exp(1j * 2 * np.pi * freqs[f] * tau)  # Array steering vector
 
     # Calculating directivity pattern for target direction only (Matrix dimension is Bf2x1)
-    #Psi[f] = np.abs(np.dot(B[:, f], E[:, f].T))
-    Psi[f] = np.abs(np.dot(B[:, f], E[:, f].conjugate()))**2  # Directivity pattern calculation
+    #Psi[f] = np.abs(np.dot(B[:, f], E.T))
+#    Psi[f] = np.abs(np.dot(B[:, f], E[:, f].T))
+
+for f in range(bf2):  # frequency index
+    # Calculating array-steering vector with dimension 1xN
+    # todo: E = ?
+    E = np.exp(1j * 2 * np.pi * freqs[f] * dist / c * np.cos(theta_0))
+
+    # Calculating directivity pattern (Matrix dimension is Bf2xBw)
+    # todo: Psi[f, a] =
+    #print(B.shape)
+    #print(E.shape)
+    Psi[f] = np.abs(np.dot(B[:,f], E.T))**2
+    #Psi[f] = np.abs(np.sum(B[:,f], E.T))
+    # todo: Psi_db[f, a] =
+    #Psi_db[f] = 20 * np.log10(Psi[f])
+
+    #if Psi_db[f] < th:
+    #    Psi_db[f] = th
 
 Bconj = np.conj(B).T
-
-Psi_diff = np.zeros(bf2)
-Psi_wn = np.zeros(bf2)
+print("B.shape ",B.shape)
+print("bf2: ",bf2)
+Psi_diff = np.zeros(bf2,dtype=complex) # Psi(omega,theta) difference, theta=constant
+Psi_wn = np.zeros(bf2,dtype=complex) # Psi(omega,theta) white noise, theta=constant
+print("Psi_diff.shape: ",Psi_diff.shape)
+print("Psi_wn.shape: ",Psi_wn.shape)
 arg = (2 * freqs * d / c).T
 
-for i in range(n):
+print(B.shape,Bconj.shape,Psi_diff.shape,arg.shape)
+#go through 8mics
+for i in range(n): #n=number of mic
     #Psi_wn = ... #todo
-    Psi_wn += np.abs(B[i, :]) ** 2  # White noise gain calculation
-    for m in range(n):
+    #Psi_wn += np.abs(B[i, :bf2]) ** 2  # White noise gain calculation
+    Psi_wn += np.abs(B[i,:bf2]) ** 2  # White noise gain calculation
+    for m in range(n): #n=number of mic
         #Psi_diff = ... #todo
-        #Psi_diff += np.abs(np.exp(1j * arg * (i - m)))  # Difference gain calculation
-        phase_diff = np.exp(-1j * arg * (i - m))  # Assuming linear spacing along one dimension
-        Psi_diff += np.abs(np.dot(B[i, :], (B[m, :] * phase_diff).conjugate()))  # Coherently sum the arrays
+        temp = B[i,:bf2] * Bconj[:bf2,m]
+        #print(temp)
+        Psi_diff += np.sinc(arg * (i - m))*temp  # Difference gain calculation
 
-
-G = 10 * np.log10( np.abs(Psi_diff) ** 2 / Psi_wn )  # Calculating Array Gain
-Gwn = 10* np.log10( Psi_wn / n )  # Calculating White Noise Gain
+G = 10 * np.log10( Psi / Psi_diff )  # Calculating Array Gain
+Gwn = 10* np.log10( Psi / Psi_wn )  # Calculating White Noise Gain
 
 # optional but interesting
-#f_aliasing = c/d*1/(1+np.cos(theta_0))
-f_aliasing  = (1 / (1 + abs(np.cos(theta_0)))) *(c/d)
+f_aliasing = (c/d)*(1/(1+np.cos(theta_0)))
 
 # Plots
 # =============================================================
 # Think of a representation that enables you to do the comparisons of all settings as asked in the exercises.
 fig, axs = plt.subplots(2)
-
+plt.subplots_adjust(hspace=0.8)
 axs[0].plot(freqs, G)
-axs[0].title.set_text('Array Gain ('+title+', d = ' + str(d) + 'cm), Aliasing above ' + str(round(1)) + 'Hz')
+axs[0].title.set_text('Array Gain ('+title+', d = ' + str(d) + 'cm), Aliasing above ' + str(round(f_aliasing)) + 'Hz')
 axs[0].set_xlabel('Frequency [Hz]')
 axs[0].set_ylabel('Gain [dB]')
 # think of meaningful y limits
